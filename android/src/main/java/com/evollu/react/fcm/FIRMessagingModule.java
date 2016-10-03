@@ -15,6 +15,7 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.ReadableMapKeySetIterator;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -28,12 +29,14 @@ import android.content.Context;
 
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Set;
 
 public class FIRMessagingModule extends ReactContextBaseJavaModule implements LifecycleEventListener, ActivityEventListener {
     private final static String TAG = FIRMessagingModule.class.getCanonicalName();
     private FIRLocalMessagingHelper mFIRLocalMessagingHelper;
-    
+
     public FIRMessagingModule(ReactApplicationContext reactContext) {
         super(reactContext);
         mFIRLocalMessagingHelper = new FIRLocalMessagingHelper((Application) reactContext.getApplicationContext());
@@ -51,11 +54,6 @@ public class FIRMessagingModule extends ReactContextBaseJavaModule implements Li
 
     @ReactMethod
     public void getInitialNotification(Promise promise){
-        Activity activity = getCurrentActivity();
-        if(activity == null){
-            promise.resolve(null);
-            return;
-        }
         promise.resolve(parseIntent(getCurrentActivity().getIntent()));
     }
 
@@ -110,6 +108,22 @@ public class FIRMessagingModule extends ReactContextBaseJavaModule implements Li
         promise.resolve(array);
     }
 
+    @ReactMethod
+    public void send(ReadableMap data) {
+      Map<String, String> setData = new HashMap<String, String>();
+      ReadableMapKeySetIterator iterator = data.keySetIterator();
+      while (iterator.hasNextKey()) {
+        String key = iterator.nextKey();
+        setData.put(key, data.getString(key));
+      }
+
+      FirebaseMessaging.getInstance()
+        .send(new RemoteMessage.Builder("473926074700" + "@gcm.googleapis.com")
+        .setMessageId(Integer.toString(1))
+        .setData(setData)
+        .build());
+    }
+
     private void sendEvent(String eventName, Object params) {
         getReactApplicationContext()
             .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
@@ -141,14 +155,14 @@ public class FIRMessagingModule extends ReactContextBaseJavaModule implements Li
                 RemoteMessage message = intent.getParcelableExtra("data");
                 WritableMap params = Arguments.createMap();
                 if(message.getData() != null){
-                    Map<String, String> data = message.getData();
+                    Map data = message.getData();
                     Set<String> keysIterator = data.keySet();
                     for(String key: keysIterator){
-                        params.putString(key, data.get(key));
+                        params.putString(key, (String) data.get(key));
                     }
+                    sendEvent("FCMNotificationReceived", params);
+                    abortBroadcast();
                 }
-                sendEvent("FCMNotificationReceived", params);
-                abortBroadcast();
 
             }
             }
