@@ -109,7 +109,7 @@ public class FIRMessagingModule extends ReactContextBaseJavaModule implements Li
     }
 
     @ReactMethod
-    public void send(ReadableMap data) {
+    public void send(ReadableMap data, String senderId) {
       Map<String, String> setData = new HashMap<String, String>();
       ReadableMapKeySetIterator iterator = data.keySetIterator();
       while (iterator.hasNextKey()) {
@@ -118,7 +118,7 @@ public class FIRMessagingModule extends ReactContextBaseJavaModule implements Li
       }
 
       FirebaseMessaging.getInstance()
-        .send(new RemoteMessage.Builder("473926074700" + "@gcm.googleapis.com")
+        .send(new RemoteMessage.Builder(senderId + "@gcm.googleapis.com")
         .setMessageId(Integer.toString(1))
         .setData(setData)
         .build());
